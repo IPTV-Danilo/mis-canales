@@ -2,60 +2,101 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel Seguro IPTV - Daniel</title>
+    <title>Panel IPTV Daniel - 3 Canales</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: #fff; text-align: center; padding: 30px; }
-        .box { background: #1a1a1a; padding: 25px; border-radius: 15px; display: inline-block; width: 90%; max-width: 450px; border: 1px solid #333; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: #00ff00; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; margin: 5px 0; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: #fff; text-align: center; padding: 20px; }
+        .box { background: #161616; padding: 25px; border-radius: 15px; display: inline-block; width: 95%; max-width: 450px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .canal-row { background: #222; margin: 10px 0; padding: 12px; border-radius: 8px; text-align: left; border-left: 4px solid #00d4ff; }
+        input { width: 100%; padding: 10px; margin-top: 8px; border-radius: 5px; border: 1px solid #444; background: #000; color: #00ff00; font-family: monospace; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; margin: 8px 0; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; }
         .btn-extract { background: #007bff; color: white; }
         .btn-save { background: #28a745; color: white; }
-        #status { margin-top: 15px; font-size: 0.9em; color: #ffc107; }
+        #status { margin-top: 15px; color: #ffc107; font-weight: bold; min-height: 20px; }
+        label { font-size: 0.9em; color: #00d4ff; text-transform: uppercase; letter-spacing: 1px; }
     </style>
 </head>
 <body>
 
 <div class="box">
-    <h2>IPTV Manager</h2>
-    <button class="btn-extract" onclick="extraer()">1. Extraer Link</button>
-    <input type="text" id="m3u8_url" placeholder="Link m3u8...">
+    <h2>IPTV Panel - Daniel</h2>
     
-    <p style="font-size: 0.8em; color: #888;">Ingresá tu Token para autorizar el guardado:</p>
-    <input type="password" id="token_input" placeholder="Pegá tu token ghp_...">
+    <div class="canal-row">
+        <label>Fox Sports 2</label>
+        <input type="text" id="url_fox2" readonly placeholder="Link pendiente...">
+    </div>
     
-    <button class="btn-save" onclick="dispararAccion()">2. Actualizar en GitHub</button>
-    <div id="status">Estado: En espera</div>
+    <div class="canal-row">
+        <label>TNT Sports</label>
+        <input type="text" id="url_tnt" readonly placeholder="Link pendiente...">
+    </div>
+    
+    <div class="canal-row">
+        <label>ESPN Premium</label>
+        <input type="text" id="url_espn" readonly placeholder="Link pendiente...">
+    </div>
+
+    <button class="btn-extract" onclick="extraerTodo()">1. EXTRAER LINKS (Usar en Argentina)</button>
+    
+    <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+    
+    <input type="password" id="token_input" placeholder="Pegá tu Token de GitHub (ghp_...)">
+    
+    <button class="btn-save" onclick="subirAGitHub()">2. ACTUALIZAR EN GITHUB</button>
+    
+    <div id="status">Estado: Listo</div>
 </div>
 
 <script>
     const USER = "danilocrypto81-ops";
     const REPO = "mis-canales";
-    const TARGET = "https://streamtpnew.com/global1.php?stream=fox2ar";
+    
+    const CANALES = [
+        { id: 'url_fox2', nombre: 'Fox Sports 2', url: 'https://streamtpnew.com/global1.php?stream=fox2ar' },
+        { id: 'url_tnt', nombre: 'TNT Sports', url: 'https://streamtpnew.com/global1.php?stream=tntsports' },
+        { id: 'url_espn', nombre: 'ESPN Premium', url: 'https://streamtpnew.com/global1.php?stream=espnpremium' }
+    ];
 
-    async function extraer() {
+    async function extraerTodo() {
         const stat = document.getElementById('status');
-        const input = document.getElementById('m3u8_url');
-        stat.innerText = "Buscando link...";
-        try {
-            const proxy = "https://images" + ~~(Math.random() * 33) + "-focus-opensocial.googleusercontent.com/gadgets/proxy?container=none&url=" + encodeURIComponent(TARGET);
-            const res = await fetch(proxy);
-            const text = await res.text();
-            const match = text.match(/(https?:\/\/[^\s'"]+\.m3u8[^\s'"]*)/);
-            if (match) {
-                input.value = match[0].replace(/\\/g, '');
-                stat.innerText = "✅ Link extraído.";
-            } else { stat.innerText = "❌ No se encontró el link."; }
-        } catch (e) { stat.innerText = "❌ Error de conexión."; }
+        stat.innerText = "⏳ Extrayendo links... esperá un momento.";
+        
+        for (let canal of CANALES) {
+            const input = document.getElementById(canal.id);
+            try {
+                // Usamos el túnel de Google para leer el código de la web
+                const proxy = "https://images" + ~~(Math.random() * 33) + "-focus-opensocial.googleusercontent.com/gadgets/proxy?container=none&url=" + encodeURIComponent(canal.url);
+                const res = await fetch(proxy);
+                const text = await res.text();
+                
+                // Buscamos el link .m3u8
+                const match = text.match(/(https?:\/\/[^\s'"]+\.m3u8[^\s'"]*)/);
+                
+                if (match) {
+                    input.value = match[0].replace(/\\/g, '');
+                } else {
+                    input.value = "❌ No encontrado";
+                }
+            } catch (e) { input.value = "❌ Error de conexión"; }
+        }
+        stat.innerText = "✅ Extracción finalizada con éxito.";
     }
 
-    async function dispararAccion() {
+    async function subirAGitHub() {
         const stat = document.getElementById('status');
-        const link = document.getElementById('m3u8_url').value;
         const token = document.getElementById('token_input').value;
+        
+        if (!token) { alert("Por seguridad, debés pegar tu Token de GitHub."); return; }
 
-        if (!link || !token) { alert("Falta el link o el token"); return; }
+        // Armamos el contenido del archivo M3U
+        let m3uContent = "#EXTM3U\n";
+        CANALES.forEach(c => {
+            const link = document.getElementById(c.id).value;
+            if (link && link.startsWith("http")) {
+                m3uContent += `#EXTINF:-1, ${c.nombre}\n${link}\n`;
+            }
+        });
 
-        stat.innerText = "Enviando orden a GitHub Actions...";
+        stat.innerText = "📤 Enviando orden a GitHub...";
 
         try {
             const res = await fetch(`https://api.github.com/repos/${USER}/${REPO}/dispatches`, {
@@ -63,21 +104,20 @@
                 headers: {
                     "Authorization": `Bearer ${token}`,
                     "Accept": "application/vnd.github.v3+json",
-                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
                     event_type: "update_link",
-                    client_payload: { link: link }
+                    client_payload: { link: m3uContent } 
                 })
             });
 
             if (res.ok) {
-                stat.innerText = "🚀 ¡Orden enviada! El archivo se actualizará en 1 minuto.";
-                document.getElementById('token_input').value = ""; // Limpiar token por seguridad
+                stat.innerText = "🚀 ¡Orden recibida! El archivo se actualizará en unos segundos.";
+                document.getElementById('token_input').value = "";
             } else {
-                stat.innerText = "❌ Error de autorización. Revisá el token.";
+                stat.innerText = "❌ Error de Token: Revisá si tiene permisos 'repo'.";
             }
-        } catch (e) { stat.innerText = "❌ Error al conectar con GitHub."; }
+        } catch (e) { stat.innerText = "❌ Error técnico al conectar."; }
     }
 </script>
 </body>
