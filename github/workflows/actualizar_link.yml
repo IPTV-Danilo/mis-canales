@@ -1,0 +1,22 @@
+name: Actualizar M3U desde Panel
+on:
+  repository_dispatch:
+    types: [update_link]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Actualizar archivo m3u
+        run: |
+          echo "#EXTM3U" > lista_fresca.m3u
+          echo "#EXTINF:-1, Fox Sports 2" >> lista_fresca.m3u
+          echo "${{ github.event.client_payload.link }}" >> lista_fresca.m3u
+      - name: Commit y Push
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add lista_fresca.m3u
+          git commit -m "Link actualizado vía Panel Web"
+          git push
