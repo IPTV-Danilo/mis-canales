@@ -1,41 +1,62 @@
 import requests
 import re
 
+# --- CONFIGURACIÓN ---
+API_KEY = "996acb929b96ea421fc4404615f316b2"
+ARCHIVO_M3U = "lista_fresca.m3u"
+
 CANALES = [
     {"nombre": "Fox Sports 2", "url": "https://streamtpnew.com/global1.php?stream=fox2ar"}
 ]
 
 def buscar_m3u8(url_web):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-        'Referer': 'https://streamtpnew.com/'
-    }
+    # Construimos la URL para que pase a través del proxy de ScraperAPI
+    proxy_url = f"http://api.scraperapi.com?api_key={API_KEY}&url={url_web}"
+    
+    print(f"Buscando link a través de ScraperAPI para la URL: {url_web}")
+    
     try:
-        r = requests.get(url_web, headers=headers, timeout=20)
-        # Esto busca cualquier URL que tenga .m3u8 adentro, sin importar comillas
-        links = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', r.text)
+        # Hacemos el pedido a la API (ella se encarga de los proxies)
+        r = requests.get(proxy_url, timeout=60)
         
-        for link in links:
-            if '.m3u8' in link:
-                # Limpiamos posibles residuos de código
-                clean_link = link.split('"')[0].split("'")[0].replace('\\', '')
-                return clean_link
+        if r.status_code == 200:
+            # Buscamos cualquier patrón que parezca un link .m3u8
+            match = re.search(r'["\'](https?://[^\s\'"]+\.m3u8[^\s\'"]*)["\']', r.text)
+            
+            if not match:
+                # Intento secundario si el link está "escapado" con barras
+                match = re.search(r'(https?%3A%2F%2F[^\s\'"]+\.m3u8[^\s\'"]*)', r.text)
+
+            if match:
+                link = match.group(1).replace('\\/', '/')
+                # Si el link está url-encoded, lo limpiamos (opcional)
+                import urllib.parse
+                link = urllib.parse.unquote(link)
+                return link
+        else:
+            print(f"Error de ScraperAPI: Código {r.status_code}")
+            
         return None
-    except:
+    except Exception as e:
+        print(f"Error de conexión: {e}")
         return None
 
-# Generar el archivo
-with open("lista_fresca.m3u", "w") as f:
+# --- GENERACIÓN DE LA LISTA ---
+with open(ARCHIVO_M3U, "w") as f:
     f.write("#EXTM3U\n")
-    encontrado = False
+    encontrado_alguno = False
+    
     for canal in CANALES:
         link = buscar_m3u8(canal['url'])
         if link:
-            f.write(f"#EXTINF:-1, {canal['nombre']}\n{link}\n")
-            encontrado = True
+            f.write(f"#EXTINF:-1, {canal['nombre']}\n")
+            f.write(f"{link}\n")
+            encontrado_alguno = True
             print(f"✅ Encontrado: {canal['nombre']}")
+        else:
+            print(f"❌ No se pudo encontrar link para: {canal['nombre']}")
     
-    if not encontrado:
-        # Esto es para que te des cuenta si falló
-        f.write("# El script no pudo encontrar ningun link activo en este momento\n")
-        print("❌ No se encontró ningún link.")
+    if not encontrado_alguno:
+        f.write("# No se encontraron links activos en este intento\n")
+
+print("Proceso finalizado.")
