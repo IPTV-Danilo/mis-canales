@@ -1,0 +1,46 @@
+name: Actualizador Automatico IPTV
+on:
+  schedule:
+    - cron: '0 */3 * * *' # Corre cada 3 horas
+  workflow_dispatch: # Permite correrlo manualmente desde el boton "Run workflow"
+
+jobs:
+  update-list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Extraer Links de Canales
+        run: |
+          # Funcion para extraer link de la web usando un agente de usuario comun
+          get_link() {
+            curl -s -L "$1" | grep -oE "https?://[^\s'\"]+\.m3u8[^\s'\"]*" | head -n 1 | sed 's/\\//g'
+          }
+
+          echo "Extrayendo Fox Sports 2..."
+          FOX2=$(get_link "https://streamtpnew.com/global1.php?stream=fox2ar")
+          
+          echo "Extrayendo TNT Sports..."
+          TNT=$(get_link "https://streamtpnew.com/global1.php?stream=tntsports")
+          
+          echo "Extrayendo ESPN Premium..."
+          ESPN=$(get_link "https://streamtpnew.com/global1.php?stream=espnpremium")
+
+          # Crear el archivo M3U
+          echo "#EXTM3U" > lista_fresca.m3u
+          echo "#EXTINF:-1, Fox Sports 2" >> lista_fresca.m3u
+          echo "$FOX2" >> lista_fresca.m3u
+          echo "#EXTINF:-1, TNT Sports" >> lista_fresca.m3u
+          echo "$TNT" >> lista_fresca.m3u
+          echo "#EXTINF:-1, ESPN Premium" >> lista_fresca.m3u
+          echo "$ESPN" >> lista_fresca.m3u
+
+      - name: Guardar cambios en el Repo
+        run: |
+          git config --global user.name "Daniel-Bot"
+          git config --global user.email "bot@github.com"
+          git add lista_fresca.m3u
+          git commit -m "Actualizacion automatica de canales" || exit 0
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.MI_TOKEN_IPTV }}
