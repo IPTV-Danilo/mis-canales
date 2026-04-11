@@ -1,49 +1,55 @@
 import requests
 import re
+import base64
 
-# Lista de canales
 CANALES = [
     {"nombre": "Fox Sports 2", "url": "https://streamtpnew.com/global1.php?stream=fox2ar"}
 ]
 
 def buscar_m3u8(url_web):
-    # Simulamos ser un navegador real para que no nos bloqueen
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Referer': 'https://streamtpnew.com/'
     }
     try:
-        r = requests.get(url_web, headers=headers, timeout=15)
-        texto = r.text
+        response = requests.get(url_web, headers=headers, timeout=15)
+        html = response.text
 
-        # Intento 1: Buscar links estándar .m3u8
-        match = re.search(r'(https?://[^\s\'"]+\.m3u8[^\s\'"]*)', texto)
+        # 1. Buscamos links m3u8 directos
+        found = re.findall(r'(https?://[^\s\'"]+\.m3u8[^\s\'"]*)', html)
         
-        # Intento 2: Buscar links que están "escondidos" con barras inclinadas (ej: http:\/\/...)
-        if not match:
-            match = re.search(r'(https?:\\\/\\\/[^\s\'"]+\.m3u8[^\s\'"]*)', texto)
+        # 2. Si no hay, buscamos links en Base64 (muy común en estas webs)
+        if not found:
+            # Buscamos cadenas largas que parezcan base64
+            b64_matches = re.findall(r'["\']([A-Za-z0-9+/]{40,})={0,2}["\']', html)
+            for b in b64_matches:
+                try:
+                    decoded = base64.b64decode(b).decode('utf-8')
+                    if '.m3u8' in decoded:
+                        found.append(re.search(r'(https?://.*?\.m3u8.*)', decoded).group(1))
+                except:
+                    continue
 
-        if match:
-            link = match.group(1).replace('\\/', '/')
-            return link
+        if found:
+            # Limpiamos el link de barras raras
+            final_link = found[0].replace('\\/', '/')
+            return final_link
         
         return None
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error en script: {e}")
         return None
 
 # Crear el archivo M3U
 with open("lista_fresca.m3u", "w") as f:
     f.write("#EXTM3U\n")
     for canal in CANALES:
-        print(f"Buscando link para {canal['nombre']}...")
         link = buscar_m3u8(canal['url'])
         if link:
-            # Agregamos el User-Agent al link para que el reproductor no falle
             f.write(f"#EXTINF:-1, {canal['nombre']}\n")
+            # Forzamos el User-Agent para que el reproductor lo use
             f.write(f'#EXTVLCOPT:http-user-agent=Mozilla/5.0\n')
             f.write(f"{link}\n")
+            print(f"✅ Link encontrado para {canal['nombre']}")
         else:
-            print(f"No se encontró nada para {canal['nombre']}")
-
-print("Proceso finalizado.")
+            print(f"❌ No se encontró nada para {canal['nombre']}")
