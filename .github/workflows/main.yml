@@ -3,6 +3,10 @@ on:
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
+
+permissions:
+  contents: write # Esto le da permiso explícito al bot para escribir archivos
+
 jobs:
   run-script:
     runs-on: ubuntu-latest
@@ -10,10 +14,10 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Descargar Repositorio
-        uses: actions/checkout@v4 # Versión actualizada
+        uses: actions/checkout@v4
 
       - name: Configurar Python
-        uses: actions/setup-python@v5 # Versión actualizada
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -25,8 +29,8 @@ jobs:
 
       - name: Guardar Cambios
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           git add lista_fresca.m3u
           git commit -m "Lista actualizada automaticamente" || exit 0
           git push
