@@ -5,24 +5,22 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write # Esto le da permiso explícito al bot para escribir archivos
+  contents: write
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Descargar Repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # Versión actual
 
       - name: Configurar Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5 # Versión actual
         with:
           python-version: '3.11'
 
       - name: Instalar Librerias
-        run: pip install -r requirements.txt
+        run: pip install requests # Instalación directa más rápida
 
       - name: Ejecutar Script
         run: python actualizador.py
@@ -32,5 +30,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add lista_fresca.m3u
-          git commit -m "Lista actualizada automaticamente" || exit 0
+          git commit -m "Lista actualizada" || exit 0
           git push
