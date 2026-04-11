@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mi Capturador IPTV</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 50px; }
+        .card { background: #333; padding: 20px; border-radius: 10px; display: inline-block; }
+        input { width: 80%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; }
+        button { background: #28a745; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; }
+        #status { margin-top: 20px; color: #ffc107; }
+    </style>
+</head>
+<body>
+    <h1>Generador de Link Directo</h1>
+    <div class="card">
+        <h3>Fox Sports 2</h3>
+        <p>Hacé clic para extraer el link con tu IP local:</p>
+        <button onclick="extraerLink()">Extraer Link .m3u8</button>
+        <div id="status">Esperando...</div>
+        <input type="text" id="resultado" placeholder="El link aparecerá acá..." readonly>
+    </div>
+
+    <script>
+        async function extraerLink() {
+            const status = document.getElementById('status');
+            const resultado = document.getElementById('resultado');
+            const targetUrl = "https://streamtpnew.com/global1.php?stream=fox2ar";
+            
+            status.innerText = "Consultando página...";
+
+            try {
+                // Usamos un proxy de CORS para que el navegador nos deje leer la web
+                const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(targetUrl);
+                const response = await fetch(proxyUrl);
+                const data = await response.json();
+                const html = data.contents;
+
+                // Buscamos el link .m3u8 en el código recibido
+                const regex = /(https?:\/\/[^\s'"]+\.m3u8[^\s'"]*)/;
+                const match = html.match(regex);
+
+                if (match) {
+                    let linkFinal = match[0].replace(/\\/g, '');
+                    resultado.value = linkFinal;
+                    status.innerText = "✅ ¡Link extraído con éxito!";
+                } else {
+                    status.innerText = "❌ No se encontró el link. Probá abriendo la web original primero.";
+                }
+            } catch (error) {
+                status.innerText = "❌ Error al conectar.";
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
