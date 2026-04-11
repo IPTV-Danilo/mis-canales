@@ -1,22 +1,32 @@
 name: Actualizar Lista
 on:
   schedule:
-    - cron: '0 */6 * * *' # Se ejecuta cada 6 horas
-  workflow_dispatch:      # Permite darle al botón "Play" manual
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 jobs:
   run-script:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - name: Descargar Repositorio
+        uses: actions/checkout@v4 # Versión actualizada
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5 # Versión actualizada
         with:
-          python-version: '3.9'
-      - run: pip install -r requirements.txt
-      - run: python actualizador.py
-      - name: Guardar cambios
+          python-version: '3.11'
+
+      - name: Instalar Librerias
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar Script
+        run: python actualizador.py
+
+      - name: Guardar Cambios
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add lista_fresca.m3u
-          git commit -m "Lista actualizada" || exit 0
+          git commit -m "Lista actualizada automaticamente" || exit 0
           git push
