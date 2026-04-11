@@ -2,42 +2,83 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel IPTV - Daniel</title>
+    <title>Panel Seguro IPTV - Daniel</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f0f; color: #e0e0e0; text-align: center; padding: 40px; }
-        .container { background: #1a1a1a; padding: 30px; border-radius: 20px; display: inline-block; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.7); max-width: 500px; width: 90%; }
-        h2 { color: #00d4ff; margin-bottom: 25px; }
-        input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid #444; background: #222; color: #00ff41; font-family: monospace; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 16px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: #fff; text-align: center; padding: 30px; }
+        .box { background: #1a1a1a; padding: 25px; border-radius: 15px; display: inline-block; width: 90%; max-width: 450px; border: 1px solid #333; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: #00ff00; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; margin: 5px 0; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .btn-extract { background: #007bff; color: white; }
-        .btn-extract:hover { background: #0056b3; }
         .btn-save { background: #28a745; color: white; }
-        .btn-save:hover { background: #1e7e34; }
-        #log { margin-top: 20px; padding: 10px; border-radius: 8px; background: #000; font-size: 0.85em; min-height: 20px; color: #aaa; }
+        #status { margin-top: 15px; font-size: 0.9em; color: #ffc107; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>Actualizador IPTV</h2>
-        
-        <button class="btn-extract" onclick="extraerLink()">1. Extraer Link Fox Sports 2</button>
-        
-        <input type="text" id="link_m3u8" placeholder="Esperando extracción...">
-        
-        <button class="btn-save" onclick="subirAGitHub()">2. Enviar a lista_fresca.m3u</button>
-        
-        <div id="log">Estado: Listo</div>
-    </div>
+<div class="box">
+    <h2>IPTV Manager</h2>
+    <button class="btn-extract" onclick="extraer()">1. Extraer Link</button>
+    <input type="text" id="m3u8_url" placeholder="Link m3u8...">
+    
+    <p style="font-size: 0.8em; color: #888;">Ingresá tu Token para autorizar el guardado:</p>
+    <input type="password" id="token_input" placeholder="Pegá tu token ghp_...">
+    
+    <button class="btn-save" onclick="dispararAccion()">2. Actualizar en GitHub</button>
+    <div id="status">Estado: En espera</div>
+</div>
 
-    <script>
-        // DATOS DEL REPOSITORIO
-        const GITHUB_USER = "danilocrypto81-ops";
-        const GITHUB_REPO = "mis-canales";
-        const GITHUB_TOKEN = "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";
-        const TARGET_URL = "https://streamtpnew.com/global1.php?stream=fox2ar";
+<script>
+    const USER = "danilocrypto81-ops";
+    const REPO = "mis-canales";
+    const TARGET = "https://streamtpnew.com/global1.php?stream=fox2ar";
 
-        async function extraerLink() {
-            const log = document.getElementById('log');
-            const input = document.getElementById('link_m3u8');
-            log.innerHTML = "<span style='color: #ffc107'>Buscando link en la web original...</span>";
+    async function extraer() {
+        const stat = document.getElementById('status');
+        const input = document.getElementById('m3u8_url');
+        stat.innerText = "Buscando link...";
+        try {
+            const proxy = "https://images" + ~~(Math.random() * 33) + "-focus-opensocial.googleusercontent.com/gadgets/proxy?container=none&url=" + encodeURIComponent(TARGET);
+            const res = await fetch(proxy);
+            const text = await res.text();
+            const match = text.match(/(https?:\/\/[^\s'"]+\.m3u8[^\s'"]*)/);
+            if (match) {
+                input.value = match[0].replace(/\\/g, '');
+                stat.innerText = "✅ Link extraído.";
+            } else { stat.innerText = "❌ No se encontró el link."; }
+        } catch (e) { stat.innerText = "❌ Error de conexión."; }
+    }
+
+    async function dispararAccion() {
+        const stat = document.getElementById('status');
+        const link = document.getElementById('m3u8_url').value;
+        const token = document.getElementById('token_input').value;
+
+        if (!link || !token) { alert("Falta el link o el token"); return; }
+
+        stat.innerText = "Enviando orden a GitHub Actions...";
+
+        try {
+            const res = await fetch(`https://api.github.com/repos/${USER}/${REPO}/dispatches`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Accept": "application/vnd.github.v3+json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    event_type: "update_link",
+                    client_payload: { link: link }
+                })
+            });
+
+            if (res.ok) {
+                stat.innerText = "🚀 ¡Orden enviada! El archivo se actualizará en 1 minuto.";
+                document.getElementById('token_input').value = ""; // Limpiar token por seguridad
+            } else {
+                stat.innerText = "❌ Error de autorización. Revisá el token.";
+            }
+        } catch (e) { stat.innerText = "❌ Error al conectar con GitHub."; }
+    }
+</script>
+</body>
+</html>
